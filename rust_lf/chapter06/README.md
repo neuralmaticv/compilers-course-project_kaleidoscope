@@ -1,6 +1,7 @@
-clang++ -g main.cpp `llvm-config --cxxflags --ldflags --system-libs --libs core orcjit native` -O3 -o main
+## Chapter 6: Extending the Language: User-defined Operators 
 
+[Link for tutorial](https://llvm.org/docs/tutorial/MyFirstLanguageFrontend/LangImpl06.html)  
+ 
+```bash
 clang++ -Xlinker --export-dynamic -g main.cpp `llvm-config --cxxflags --ldflags --system-libs --libs core orcjit native` -O3 -o main
-
-
-fn printdensity(d:double) {if d > 8.0 { putchard(32) } else if d > 4.0 then putchard(46) else if d > 2.0 then   putchard(43) else   putchard(42) };
+```
