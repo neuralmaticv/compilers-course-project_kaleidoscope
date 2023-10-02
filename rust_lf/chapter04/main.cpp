@@ -854,11 +854,6 @@ static void InitializeModuleAndPassManager()
     TheFPM->doInitialization();
 }
 
-static void HandleDefinition()
-{
-    // TODO: for variable definition
-}
-
 static void HandleFunctionDefinition()
 {
     if (auto FnAST = ParseFunctionDefinition())

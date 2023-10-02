@@ -491,10 +491,6 @@ static std::unique_ptr<PrototypeAST> ParseExtern()
 // Top-Level parsing
 //===----------------------------------------------------------------------===//
 
-static void HandleDefinition()
-{
-}
-
 static void HandleFunctionDefinition()
 {
     if (ParseDefinition())

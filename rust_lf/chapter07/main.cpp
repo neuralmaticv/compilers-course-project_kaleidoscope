@@ -989,8 +989,6 @@ static std::unique_ptr<FunctionAST> ParseFunctionDefinition()
 
     getNextToken(); // eat '}'
 
-    // todo: dodati ;
-
     return std::make_unique<FunctionAST>(std::move(Proto), std::move(Body));
 }
 
@@ -1358,7 +1356,6 @@ Value *IfExprAST::codegen()
 //   endcond = endexpr
 //   br endcond, loop, endloop
 // outloop:
-// For petlju nije lako implementirat pa je ovo kod iz tutorijala. implementirana je while petlja
 Value *ForExprAST::codegen()
 {
     Function *TheFunction = Builder->GetInsertBlock()->getParent();

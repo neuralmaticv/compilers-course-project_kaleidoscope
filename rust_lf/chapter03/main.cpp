@@ -666,11 +666,6 @@ static void InitializeModule()
     Builder = std::make_unique<IRBuilder<>>(*TheContext);
 }
 
-static void HandleDefinition()
-{
-    // TODO: for variable definition
-}
-
 static void HandleFunctionDefinition()
 {
     if (auto FnAST = ParseDefinition())
