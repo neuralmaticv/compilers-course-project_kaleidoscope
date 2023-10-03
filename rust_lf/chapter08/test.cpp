@@ -7,5 +7,5 @@ extern "C"
 
 int main()
 {
-    std::cout << "average of 3.0 and 4.0: " << avg(3.0, 4.0) << std::endl;
+    std::cout << "average of 5.0 and 10.0: " << avg(5.0, 10.0) << std::endl;
 }

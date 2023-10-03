@@ -76,6 +76,7 @@ enum Token
 
     TOK_BINARY = -18,
     TOK_UNARY = -19,
+    TOK_MUT = -20,
 };
 
 static std::string identifierStr; // Filled in if TOK_IDENT
@@ -156,6 +157,9 @@ static int gettok()
 
         if (identifierStr == "unary")
             return TOK_UNARY;
+
+        if (identifierStr == "mut")
+            return TOK_MUT;
 
         return TOK_IDENT;
     }
@@ -716,7 +720,15 @@ static std::unique_ptr<ExprAST> ParseWhileExpr()
 //                    (',' identifier ('=' expression)?)* 'in' expression
 static std::unique_ptr<ExprAST> ParseLetExpr()
 {
-    getNextToken(); // eat the var.
+    getNextToken(); // eat the let.
+
+    bool isMutable = false;
+
+    if (CurTok == TOK_MUT)
+    {
+        isMutable = true;
+        getNextToken(); // eat the mut.
+    }
 
     std::vector<std::pair<std::string, std::unique_ptr<ExprAST>>> VarNames;
 
@@ -1212,11 +1224,28 @@ Value *BinaryExprAST::codegen()
             R = Builder->CreateSIToFP(R, Type::getDoubleTy(*TheContext));
             return Builder->CreateMul(L, R, "multmp");
         }
-
     case '<':
-        L = Builder->CreateFCmpULT(L, R, "cmptmp");
+        if (L->getType()->isIntegerTy())
+            L = Builder->CreateSIToFP(L, Type::getDoubleTy(*TheContext));
+
+        if (R->getType()->isIntegerTy())
+            R = Builder->CreateSIToFP(R, Type::getDoubleTy(*TheContext));
+
+        Value *ComparisonResult;
+        if (L->getType()->isIntegerTy() && R->getType()->isIntegerTy())
+        {
+            // Integer comparison
+            ComparisonResult = Builder->CreateICmpSLT(L, R, "icmptmp");
+        }
+        else
+        {
+            // Float comparison
+            ComparisonResult = Builder->CreateFCmpULT(L, R, "fcmptmp");
+        }
+
         // Convert bool 0/1 to double 0.0 or 1.0
-        return Builder->CreateUIToFP(L, Type::getDoubleTy(*TheContext), "booltmp");
+        return Builder->CreateUIToFP(ComparisonResult, Type::getDoubleTy(*TheContext), "booltmp");
+
     default:
         break;
     }
@@ -1278,9 +1307,17 @@ Value *IfExprAST::codegen()
     if (!CondV)
         return nullptr;
 
-    // Convert condition to a bool by comparing non-equal to 0.0.
-    CondV = Builder->CreateFCmpONE(
-        CondV, ConstantFP::get(*TheContext, APFloat(0.0)), "ifcond");
+    // Convert condition to a bool by comparing non-equal to 0.
+    if (CondV->getType()->isIntegerTy())
+    {
+        CondV = Builder->CreateICmpNE(
+            CondV, ConstantInt::get(*TheContext, APInt(CondV->getType()->getIntegerBitWidth(), 0)), "ifcond");
+    }
+    else if (CondV->getType()->isDoubleTy())
+    {
+        CondV = Builder->CreateFCmpONE(
+            CondV, ConstantFP::get(*TheContext, APFloat(0.0)), "ifcond");
+    }
 
     Function *TheFunction = Builder->GetInsertBlock()->getParent();
 
@@ -1303,6 +1340,13 @@ Value *IfExprAST::codegen()
         {
             return nullptr;
         }
+
+        // Convert the result to double if it's not already.
+        if (!IfV->getType()->isDoubleTy())
+        {
+            IfV = Builder->CreateSIToFP(IfV, Type::getDoubleTy(*TheContext), "castif");
+        }
+
         IfVs.push_back(IfV);
     }
 
@@ -1322,6 +1366,13 @@ Value *IfExprAST::codegen()
         {
             return nullptr;
         }
+
+        // Convert the result to double if it's not already.
+        if (!ElseV->getType()->isDoubleTy())
+        {
+            ElseV = Builder->CreateSIToFP(ElseV, Type::getDoubleTy(*TheContext), "castelse");
+        }
+
         ElseVs.push_back(ElseV);
     }
 
@@ -1462,24 +1513,31 @@ Value *WhileExprAST::codegen()
     Function *TheFunction = Builder->GetInsertBlock()->getParent();
     BasicBlock *LoopBB = BasicBlock::Create(*TheContext, "loop", TheFunction);
     Builder->CreateBr(LoopBB);
+
     // Start insertion in LoopBB.
     Builder->SetInsertPoint(LoopBB);
+
+    Value *LastExprValue = nullptr;
+
     for (auto &expr : Body)
     {
-        if (!expr->codegen())
+        LastExprValue = expr->codegen();
+
+        if (!LastExprValue)
             return nullptr;
     }
+
     Value *EndCond = End->codegen();
     if (!EndCond)
         return nullptr;
-    BasicBlock *AfterBB =
-        BasicBlock::Create(*TheContext, "afterloop", TheFunction);
 
+    BasicBlock *AfterBB = BasicBlock::Create(*TheContext, "afterloop", TheFunction);
     Builder->CreateCondBr(EndCond, LoopBB, AfterBB);
+
     // Any new code will be inserted in AfterBB.
     Builder->SetInsertPoint(AfterBB);
 
-    return Constant::getNullValue(Type::getDoubleTy(*TheContext));
+    return LastExprValue;
 }
 
 Value *LetExprAST::codegen()
