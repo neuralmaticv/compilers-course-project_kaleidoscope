@@ -439,7 +439,7 @@ static std::unique_ptr<PrototypeAST> ParsePrototype()
 }
 
 /// definition ::= 'fn' prototype expression
-static std::unique_ptr<FunctionAST> ParseDefinition()
+static std::unique_ptr<FunctionAST> HandleDefinition()
 {
     getNextToken(); // eat fn.
 
@@ -493,7 +493,7 @@ static std::unique_ptr<PrototypeAST> ParseExtern()
 
 static void HandleFunctionDefinition()
 {
-    if (ParseDefinition())
+    if (HandleDefinition())
     {
         fprintf(stderr, "Parsed a function definition.\n");
     }

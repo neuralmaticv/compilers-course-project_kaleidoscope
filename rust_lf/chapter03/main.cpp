@@ -468,7 +468,7 @@ static std::unique_ptr<PrototypeAST> ParsePrototype()
 }
 
 /// definition ::= 'fn' prototype expression
-static std::unique_ptr<FunctionAST> ParseDefinition()
+static std::unique_ptr<FunctionAST> HandleDefinition()
 {
     getNextToken(); // eat fn.
 
@@ -668,7 +668,7 @@ static void InitializeModule()
 
 static void HandleFunctionDefinition()
 {
-    if (auto FnAST = ParseDefinition())
+    if (auto FnAST = HandleDefinition())
     {
         if (auto *FnIR = FnAST->codegen())
         {
